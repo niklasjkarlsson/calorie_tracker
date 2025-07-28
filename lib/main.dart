@@ -32,6 +32,7 @@ class _HomePageState extends State<HomePage> {
   String? _productName;
   bool _loading = false;
   String? _error;
+  List<Map<String, dynamic>>? _searchResults;
 
   void _search() async {
     setState(() {
@@ -39,21 +40,48 @@ class _HomePageState extends State<HomePage> {
       _calories = null;
       _productName = null;
       _error = null;
+      _searchResults = null;
     });
 
-    final product = await OpenFoodFactsAPI.fetchProduct(_barcodeController.text.trim());
+    final input = _barcodeController.text.trim();
 
-    if (product != null) {
+    if (input.isEmpty) {
       setState(() {
-        _productName = product['product_name'] ?? 'Unknown product';
-        _calories = product['nutriments']?['energy-kcal_100g']?.toString() ?? 'No calorie data';
+        _error = 'Please enter a barcode or search term';
         _loading = false;
       });
+      return;
+    }
+
+    if (RegExp(r'^\d+$').hasMatch(input)) {
+      // Input is digits => treat as barcode
+      final product = await OpenFoodFactsAPI.fetchProduct(input);
+      if (product != null) {
+        setState(() {
+          _productName = product['product_name'] ?? 'Unknown product';
+          _calories = product['nutriments']?['energy-kcal_100g']?.toString() ?? 'No calorie data';
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _error = 'Product not found';
+          _loading = false;
+        });
+      }
     } else {
-      setState(() {
-        _error = 'Product not found';
-        _loading = false;
-      });
+      // Input is not digits => treat as name
+      final results = await OpenFoodFactsAPI.fetchProductByName(input);
+      if (results.isNotEmpty) {
+        setState(() {
+          _searchResults = results;
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _error = 'No products found';
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -68,25 +96,26 @@ class _HomePageState extends State<HomePage> {
             TextField(
               controller: _barcodeController,
               decoration: const InputDecoration(
-                labelText: 'Enter barcode',
+                labelText: 'Enter barcode or product name',
                 border: OutlineInputBorder(),
               ),
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.text,
               onSubmitted: (_) => _search(),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _loading ? null : _search,
-              child: _loading 
-                ? const CircularProgressIndicator(color: Colors.white) 
-                : const Text('Search'),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Search'),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () async {
                 final scannedBarcode = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => BarcodeScannerPage()),
+                  MaterialPageRoute(
+                      builder: (context) => BarcodeScannerPage()),
                 );
 
                 if (scannedBarcode != null && mounted) {
@@ -99,12 +128,51 @@ class _HomePageState extends State<HomePage> {
               child: const Text('Scan Barcode'),
             ),
             const SizedBox(height: 20),
-            if (_productName != null) 
-              Text('Product: $_productName', style: const TextStyle(fontSize: 18)),
-            if (_calories != null) 
-              Text('Calories per 100g: $_calories kcal', style: const TextStyle(fontSize: 18)),
-            if (_error != null) 
+            if (_productName != null)
+              Text('Product: $_productName',
+                  style: const TextStyle(fontSize: 18)),
+            if (_calories != null)
+              Text('Calories per 100g: $_calories kcal',
+                  style: const TextStyle(fontSize: 18)),
+            if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
+
+            if (_searchResults != null) ...[
+              const SizedBox(height: 20),
+              const Text('Select a product:',
+                  style: TextStyle(fontSize: 18)),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _searchResults!.length,
+                  itemBuilder: (context, index) {
+                    final product = _searchResults![index];
+                    final name = product['product_name'] ?? 'Unnamed product';
+                    final barcode = product['code'] ?? '';
+
+                    return ListTile(
+                      title: Text(name),
+                      subtitle: Text('Barcode: $barcode'),
+                      onTap: () async {
+                        final detailedProduct =
+                            await OpenFoodFactsAPI.fetchProduct(barcode);
+                        if (detailedProduct != null) {
+                          setState(() {
+                            _productName =
+                                detailedProduct['product_name'] ?? 'Unknown product';
+                            _calories = detailedProduct['nutriments']
+                                    ?['energy-kcal_100g']
+                                    ?.toString() ??
+                                'No calorie data';
+                            _searchResults = null;
+                            _barcodeController.text = barcode;
+                          });
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),
