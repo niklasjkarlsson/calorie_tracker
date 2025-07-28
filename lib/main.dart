@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api.dart';
+import 'barcode_scanner_page.dart';
 
 void main() {
   runApp(const CalorieTrackerApp());
@@ -76,12 +77,34 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _loading ? null : _search,
-              child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Search'),
+              child: _loading 
+                ? const CircularProgressIndicator(color: Colors.white) 
+                : const Text('Search'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () async {
+                final scannedBarcode = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => BarcodeScannerPage()),
+                );
+
+                if (scannedBarcode != null && mounted) {
+                  setState(() {
+                    _barcodeController.text = scannedBarcode;
+                  });
+                  _search();
+                }
+              },
+              child: const Text('Scan Barcode'),
             ),
             const SizedBox(height: 20),
-            if (_productName != null) Text('Product: $_productName', style: const TextStyle(fontSize: 18)),
-            if (_calories != null) Text('Calories per 100g: $_calories kcal', style: const TextStyle(fontSize: 18)),
-            if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+            if (_productName != null) 
+              Text('Product: $_productName', style: const TextStyle(fontSize: 18)),
+            if (_calories != null) 
+              Text('Calories per 100g: $_calories kcal', style: const TextStyle(fontSize: 18)),
+            if (_error != null) 
+              Text(_error!, style: const TextStyle(color: Colors.red)),
           ],
         ),
       ),
