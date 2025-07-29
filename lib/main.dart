@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'barcode_scanner_page.dart';
 import 'dart:async';
+import 'meal_logger_page.dart';
 
 void main() {
   runApp(const CalorieTrackerApp());
@@ -147,6 +148,17 @@ class _HomePageState extends State<HomePage> {
               },
               child: const Text('Scan Barcode'),
             ),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MealLoggerPage()),
+                );
+              },
+              child: const Text('Log My Meals'),
+            ),
+
             const SizedBox(height: 20),
             if (_productName != null) ...[
               Text('Product: $_productName',
