@@ -106,21 +106,29 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
-              controller: _barcodeController,
-              decoration: const InputDecoration(
-                labelText: 'Enter barcode or product name',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: _handleInputChange,
+            Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                TextField(
+                  controller: _barcodeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Enter barcode or product name',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: _handleInputChange,
+                ),
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 10),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _loading ? null : _search,
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Search'),
-            ),
+
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () async {
