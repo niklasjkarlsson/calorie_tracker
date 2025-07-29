@@ -33,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>>? _searchResults;
+  Map<String, dynamic>? _selectedProduct;
 
   void _search() async {
     setState(() {
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
       _productName = null;
       _error = null;
       _searchResults = null;
+      _selectedProduct = null;
     });
 
     final input = _barcodeController.text.trim();
@@ -60,6 +62,7 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _productName = product['product_name'] ?? 'Unknown product';
           _calories = product['nutriments']?['energy-kcal_100g']?.toString() ?? 'No calorie data';
+          _selectedProduct = product;
           _loading = false;
         });
       } else {
@@ -71,7 +74,7 @@ class _HomePageState extends State<HomePage> {
     } else {
       // Input is not digits => treat as name
       final results = await OpenFoodFactsAPI.fetchProductByName(input);
-      if (results.isNotEmpty) {
+      if (results != null && results.isNotEmpty) {
         setState(() {
           _searchResults = results;
           _loading = false;
@@ -128,14 +131,23 @@ class _HomePageState extends State<HomePage> {
               child: const Text('Scan Barcode'),
             ),
             const SizedBox(height: 20),
-            if (_productName != null)
+            if (_productName != null) ...[
               Text('Product: $_productName',
                   style: const TextStyle(fontSize: 18)),
-            if (_calories != null)
-              Text('Calories per 100g: $_calories kcal',
-                  style: const TextStyle(fontSize: 18)),
-            if (_error != null)
+              if (_calories != null)
+                Text('Calories per 100g: $_calories kcal',
+                    style: const TextStyle(fontSize: 18)),
+              if (_selectedProduct != null) ...[
+                Text('Brand : ${_selectedProduct!['brands'] ?? 'Unknown'}'),
+                Text('Proteins: ${_selectedProduct!['nutriments']?['proteins_100g']?.toString() ?? 'N/A'} g'),
+                Text('Carbohydrates: ${_selectedProduct!['nutriments']?['carbohydrates_100g']?.toString() ?? 'N/A'} g'),
+                Text('Fats: ${_selectedProduct!['nutriments']?['fat_100g']?.toString() ?? 'N/A'} g'),
+              ],
+            ],  
+            if (_error != null) ...[
+              const SizedBox(height: 10),
               Text(_error!, style: const TextStyle(color: Colors.red)),
+            ],
 
             if (_searchResults != null) ...[
               const SizedBox(height: 20),
@@ -147,11 +159,17 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final product = _searchResults![index];
                     final name = product['product_name'] ?? 'Unnamed product';
+                    final brand = product['brands'] ?? 'Unknown brand';
                     final barcode = product['code'] ?? '';
+                    final nutriments = product['nutriments'] ?? {};
+                    final proteins = nutriments['proteins_100g']?.toString() ?? 'N/A';
+                    final carbs = nutriments['carbohydrates_100g']?.toString() ?? 'N/A';
+                    final fats = nutriments['fat_100g']?.toString() ?? 'N/A';
 
                     return ListTile(
                       title: Text(name),
-                      subtitle: Text('Barcode: $barcode'),
+                      subtitle: Text('Brand: $brand\nProtein: $proteins g | Carbs: $carbs g | Fats: $fats g'),
+                      isThreeLine: true,
                       onTap: () async {
                         final detailedProduct =
                             await OpenFoodFactsAPI.fetchProduct(barcode);
@@ -163,6 +181,7 @@ class _HomePageState extends State<HomePage> {
                                     ?['energy-kcal_100g']
                                     ?.toString() ??
                                 'No calorie data';
+                            _selectedProduct = detailedProduct;
                             _searchResults = null;
                             _barcodeController.text = barcode;
                           });
