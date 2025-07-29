@@ -3,6 +3,7 @@ import 'api.dart';
 import 'barcode_scanner_page.dart';
 import 'dart:async';
 import 'meal_logger_page.dart';
+import 'widgets/add_food_dialog.dart';
 
 void main() {
   runApp(const CalorieTrackerApp());
@@ -171,6 +172,29 @@ class _HomePageState extends State<HomePage> {
                 Text('Proteins: ${_selectedProduct!['nutriments']?['proteins_100g']?.toString() ?? 'N/A'} g'),
                 Text('Carbohydrates: ${_selectedProduct!['nutriments']?['carbohydrates_100g']?.toString() ?? 'N/A'} g'),
                 Text('Fats: ${_selectedProduct!['nutriments']?['fat_100g']?.toString() ?? 'N/A'} g'),
+
+                ElevatedButton(
+                  onPressed: () {
+                    final product = _selectedProduct!;
+                    final nutriments = product['nutriments'] ?? {};
+
+                    showAddFoodDialog(
+                      context,
+                      'Lunch',
+                      (foodEntry) {
+                        print('Added to lunch: $foodEntry');
+                      },
+                      prefill: {
+                        'name': product['product_name'] ?? '',
+                        'kcal': nutriments['energy-kcal_100g']?.toString() ?? '',
+                        'protein': nutriments['proteins_100g']?.toString() ?? '',
+                        'carbs': nutriments['carbohydrates_100g']?.toString() ?? '',
+                        'fat': nutriments['fat_100g']?.toString() ?? '',
+                      },
+                    );
+                  },
+                  child: const Text('Add to Meal'),
+                ),
               ],
             ],  
             if (_error != null) ...[
