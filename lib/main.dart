@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'api.dart';
 import 'barcode_scanner_page.dart';
+import 'dart:async';
 
 void main() {
   runApp(const CalorieTrackerApp());
@@ -28,12 +29,21 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _barcodeController = TextEditingController();
+  Timer? _debounce;
   String? _calories;
   String? _productName;
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>>? _searchResults;
   Map<String, dynamic>? _selectedProduct;
+
+  void _handleInputChange(String input) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) _search();
+    });
+  }
 
   void _search() async {
     setState(() {
@@ -102,8 +112,7 @@ class _HomePageState extends State<HomePage> {
                 labelText: 'Enter barcode or product name',
                 border: OutlineInputBorder(),
               ),
-              keyboardType: TextInputType.text,
-              onSubmitted: (_) => _search(),
+              onChanged: _handleInputChange,
             ),
             const SizedBox(height: 10),
             ElevatedButton(
