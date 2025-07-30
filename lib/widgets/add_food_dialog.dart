@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import '../models/logged_food.dart';
 
-Future<void> showAddFoodDialog(
-  BuildContext context,
-  String meal,
-  Function(Map<String, dynamic>) onAdd, 
-  {Map<String, String>? prefill}
-  ) 
-{
-  final nameController = TextEditingController(text: prefill?['name'] ?? '');
+Future<void> showAddFoodDialog({
+  required BuildContext context,
+  required String meal,
+  required Map<String, dynamic> product,
+  required Function(LoggedFood) onAdd, 
+
+}) async  {
+  
+  final name = product['product_name'] ?? 'Unnamed food';
+  final nutriments = product['nutriments'] ?? {};
+
+  final double per100Kcal = (nutriments['energy-kcal_100g'] ?? 0).toDouble();
+  final double per100Protein = (nutriments['proteins_100g'] ?? 0).toDouble();
+  final double per100Carbs = (nutriments['carbohydrates_100g'] ?? 0).toDouble();
+  final double per100Fat = (nutriments['fat_100g'] ?? 0).toDouble();
+
+  final nameController = TextEditingController(text: name);
   final amountController = TextEditingController(text: '100');
-
-  final double per100Kcal = double.tryParse(prefill?['kcal'] ?? '') ?? 0;
-  final double per100Protein = double.tryParse(prefill?['protein'] ?? '') ?? 0;
-  final double per100Carbs = double.tryParse(prefill?['carbs'] ?? '') ?? 0;
-  final double per100Fat = double.tryParse(prefill?['fat'] ?? '') ?? 0;
-
   final kcalController = TextEditingController(text: per100Kcal.toStringAsFixed(1));
   final proteinController = TextEditingController(text: per100Protein.toStringAsFixed(1));
   final carbsController = TextEditingController(text: per100Carbs.toStringAsFixed(1));
@@ -78,15 +82,19 @@ Future<void> showAddFoodDialog(
           ElevatedButton(
             child: const Text('Add'),
             onPressed: () {
-              final foodEntry = {
-                'name': nameController.text.trim(),
-                'amount': double.tryParse(amountController.text) ?? 0,
-                'calories': double.tryParse(kcalController.text) ?? 0,
-                'protein': double.tryParse(proteinController.text) ?? 0,
-                'carbs': double.tryParse(carbsController.text) ?? 0,
-                'fat': double.tryParse(fatController.text) ?? 0,
-              };
-              onAdd(foodEntry);
+              final amount = double.tryParse(amountController.text) ?? 100;
+              final multiplier = amount / 100;
+
+              final food = LoggedFood(
+                name: product['product_name'] ?? 'Unnamed food',
+                amount: amount,
+                kcal: (product['nutriments']?['energy-kcal_100g'] ?? 0) * multiplier,
+                protein: (product['nutriments']?['proteins_100g'] ?? 0) * multiplier,
+                carbs: (product['nutriments']?['carbohydrates_100g'] ?? 0) * multiplier,
+                fat: (product['nutriments']?['fat_100g'] ?? 0) * multiplier,
+              );
+
+              onAdd(food);
               Navigator.of(context).pop();
             },
           ),

@@ -176,24 +176,14 @@ class _HomePageState extends State<HomePage> {
                 ElevatedButton(
                   onPressed: () {
                     final product = _selectedProduct!;
-                    final nutriments = product['nutriments'] ?? {};
-
-                    showAddFoodDialog(
+                    Navigator.push(
                       context,
-                      'Lunch',
-                      (foodEntry) {
-                        print('Added to lunch: $foodEntry');
-                      },
-                      prefill: {
-                        'name': product['product_name'] ?? '',
-                        'kcal': nutriments['energy-kcal_100g']?.toString() ?? '',
-                        'protein': nutriments['proteins_100g']?.toString() ?? '',
-                        'carbs': nutriments['carbohydrates_100g']?.toString() ?? '',
-                        'fat': nutriments['fat_100g']?.toString() ?? '',
-                      },
+                      MaterialPageRoute(
+                        builder: (_) => MealLoggerPage(initialProduct: product),
+                      ),
                     );
                   },
-                  child: const Text('Add to Meal'),
+                  child: const Text('Add to Meal Log')
                 ),
               ],
             ],  

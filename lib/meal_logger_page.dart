@@ -1,30 +1,17 @@
 import 'package:flutter/material.dart';
-import '../api.dart';
+import 'widgets/add_food_dialog.dart';
+import '../models/logged_food.dart';
+import 'widgets/openfoodfacts_search_delegate.dart';
 
 class MealLoggerPage extends StatefulWidget {
-  const MealLoggerPage({super.key});
+  final Map<String, dynamic>? initialProduct;
+  
+  const MealLoggerPage({super.key, this.initialProduct});
 
   @override
   State<MealLoggerPage> createState() => _MealLoggerPageState();
 }
 
-class LoggedFood {
-  final String name;
-  final double amount;
-  final double kcal;
-  final double protein;
-  final double carbs;
-  final double fat;
-
-  LoggedFood({
-    required this.name,
-    required this.amount,
-    required this.kcal,
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-  });
-}
 
 class _MealLoggerPageState extends State<MealLoggerPage> {
   final Map<String, List<LoggedFood>> _meals = {
@@ -33,114 +20,53 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
     'Dinner': [],
   };
 
-  void _addFood(String meal) {
-    final searchController = TextEditingController();
-    final amountController = TextEditingController(text: '100');
-    final kcalController = TextEditingController();
-    final proteinController = TextEditingController();
-    final carbsController = TextEditingController();
-    final fatController = TextEditingController();
-    List<Map<String, dynamic>> searchResults = [];
-    Map<String, dynamic>? selectedProduct;
-
-    void updateFieldsFromProduct(Map<String, dynamic> product) {
-      final nutriments = product['nutriments'] ?? {};
-      kcalController.text = nutriments['energy-kcal_100g']?.toString() ?? '0';
-      proteinController.text = nutriments['proteins_100g']?.toString() ?? '0';
-      carbsController.text = nutriments['carbohydrates_100g']?.toString() ?? '0';
-      fatController.text = nutriments['fat_100g']?.toString() ?? '0';
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialProduct != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _addFoodFromProduct('Lunch', widget.initialProduct!); // Or allow user to choose the meal
+      });
     }
+  }
 
-    showDialog(
+
+
+
+  void _addFood(String meal) async {
+    final selected = await showSearch<Map<String, dynamic>?>(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Add food to $meal'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: searchController,
-                  decoration: const InputDecoration(labelText: 'Search food'),
-                  onChanged: (value) async {
-                    final results = await OpenFoodFactsAPI.fetchProductByName(value);
-                    setState(() => searchResults = results ?? []);
-                  },
-                ),
-                ...searchResults.map((product) {
-                  final name = product['product_name'] ?? 'Unnamed product';
-                  return ListTile(
-                    title: Text(name),
-                    onTap: () {
-                      selectedProduct = product;
-                      updateFieldsFromProduct(product);
-                      searchController.text = name;
-                      setState(() => searchResults = []);
-                    },
-                  );
-                }).toList(),
-                TextField(
-                  controller: amountController,
-                  decoration: const InputDecoration(labelText: 'Amount (g)'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (_) {
-                    final amount = double.tryParse(amountController.text) ?? 100;
-                    final scale = amount / 100.0;
-                    kcalController.text = ((double.tryParse(kcalController.text) ?? 0) * scale).toStringAsFixed(1);
-                    proteinController.text = ((double.tryParse(proteinController.text) ?? 0) * scale).toStringAsFixed(1);
-                    carbsController.text = ((double.tryParse(carbsController.text) ?? 0) * scale).toStringAsFixed(1);
-                    fatController.text = ((double.tryParse(fatController.text) ?? 0) * scale).toStringAsFixed(1);
-                  },
-                ),
-                TextField(controller: kcalController, decoration: const InputDecoration(labelText: 'Calories'), keyboardType: TextInputType.number),
-                TextField(controller: proteinController, decoration: const InputDecoration(labelText: 'Protein (g)'), keyboardType: TextInputType.number),
-                TextField(controller: carbsController, decoration: const InputDecoration(labelText: 'Carbs (g)'), keyboardType: TextInputType.number),
-                TextField(controller: fatController, decoration: const InputDecoration(labelText: 'Fats (g)'), keyboardType: TextInputType.number),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final double amount = double.tryParse(amountController.text) ?? 100;
-                final double perGram = amount / 100;
+      delegate: OpenFoodFactsSearchDelegate(),
+    );
 
-                final food = LoggedFood(
-                  name: searchController.text.trim().isNotEmpty
-                      ? searchController.text.trim()
-                      : 'Unnamed food',
-                  amount: amount,
-                  kcal: double.tryParse(kcalController.text) != null
-                      ? double.parse(kcalController.text) * perGram
-                      : 0,
-                  protein: double.tryParse(proteinController.text) != null
-                      ? double.parse(proteinController.text) * perGram
-                      : 0,
-                  carbs: double.tryParse(carbsController.text) != null
-                      ? double.parse(carbsController.text) * perGram
-                      : 0,
-                  fat: double.tryParse(fatController.text) != null
-                      ? double.parse(fatController.text) * perGram
-                      : 0,
-                );
+    if (selected != null) {
+      await showAddFoodDialog(
+        context: context,
+        meal: meal,
+        product: selected,
+        onAdd: (LoggedFood food) {
+          setState(() {
+            _meals[meal]!.add(food);
+          });
+        },
+      );
+    }
+  }
 
-                setState(() {
-                  _meals[meal]!.add(food);
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        ),
-      ),
+  void _addFoodFromProduct(String meal, Map<String, dynamic> product) async {
+    await showAddFoodDialog(
+      context: context,
+      meal: meal,
+      product: product,
+      onAdd: (LoggedFood food) {
+        setState(() {
+          _meals[meal]!.add(food);
+        });
+      },
     );
   }
+
+
 
   Widget _buildMealCard(String mealName, List<LoggedFood> foods) {
     double totalKcal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
