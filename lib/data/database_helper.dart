@@ -53,11 +53,17 @@ class DatabaseHelper {
     });
   }
 
+  Future<int> deleteFood(int id) async {
+    final db = await database;
+    return await db.delete('meals', where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<List<LoggedFood>> fetchFoodsByMeal(String meal) async {
     final db = await database;
     final maps = await db.query('meals', where: 'meal = ?', whereArgs: [meal]);
 
     return maps.map((map) => LoggedFood(
+      id: map['id'] as int?,
       name: map['name'] as String,
       amount: map['amount'] as double,
       kcal: map['kcal'] as double,

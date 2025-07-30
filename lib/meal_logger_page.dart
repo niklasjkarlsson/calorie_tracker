@@ -64,6 +64,13 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
     }
   }
 
+  void _deleteFood(String meal, LoggedFood food) async {
+    await DatabaseHelper.instance.deleteFood(food.id!);
+    setState(() {
+      _meals[meal]!.removeWhere((f) => f.id == food.id);
+    });
+  }
+
   void _addFoodFromProduct(String meal, Map<String, dynamic> product) async {
     await showAddFoodDialog(
       context: context,
@@ -96,7 +103,12 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
           ...foods.map((food) => ListTile(
                 title: Text(food.name),
                 subtitle: Text('${food.amount}g - ${food.kcal} kcal'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => _deleteFood(mealName, food),
+                ),
               )),
+
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
