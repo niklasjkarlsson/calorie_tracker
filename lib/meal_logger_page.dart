@@ -3,6 +3,7 @@ import 'widgets/add_food_dialog.dart';
 import '../models/logged_food.dart';
 import 'widgets/openfoodfacts_search_delegate.dart';
 import '../data/database_helper.dart';
+import 'package:intl/intl.dart';
 
 class MealLoggerPage extends StatefulWidget {
   final Map<String, dynamic>? initialProduct;
@@ -14,6 +15,11 @@ class MealLoggerPage extends StatefulWidget {
 }
 
 class _MealLoggerPageState extends State<MealLoggerPage> {
+  final PageController _pageController = PageController(initialPage: 1000);
+  DateTime _today = DateTime.now();
+  DateTime get _currentDate => _today.add(Duration(days: _currentPage - 1000));
+  int _currentPage = 1000;
+
   final Map<String, List<LoggedFood>> _meals = {
     'Breakfast': [],
     'Lunch': [],
@@ -23,7 +29,7 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
   @override
   void initState() {
     super.initState();
-    _loadMealsFromDatabase();
+    _loadMealsFromDatabase(_currentDate);
     if (widget.initialProduct != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _addFoodFromProduct('Lunch', widget.initialProduct!);
@@ -31,10 +37,10 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
     }
   }
 
-  Future<void> _loadMealsFromDatabase() async {
-    final breakfast = await DatabaseHelper.instance.fetchFoodsByMeal('Breakfast');
-    final lunch = await DatabaseHelper.instance.fetchFoodsByMeal('Lunch');
-    final dinner = await DatabaseHelper.instance.fetchFoodsByMeal('Dinner');
+  Future<void> _loadMealsFromDatabase(DateTime date) async {
+    final breakfast = await DatabaseHelper.instance.fetchFoodsByMealAndDate('Breakfast', date);
+    final lunch = await DatabaseHelper.instance.fetchFoodsByMealAndDate('Lunch', date);
+    final dinner = await DatabaseHelper.instance.fetchFoodsByMealAndDate('Dinner', date);
 
     setState(() {
       _meals['Breakfast'] = breakfast;
@@ -55,6 +61,7 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
         meal: meal,
         product: selected,
         onAdd: (LoggedFood food) async {
+          food = food.copyWith(date: _currentDate); // <-- set date here
           await DatabaseHelper.instance.insertFood(meal, food);
           setState(() {
             _meals[meal]!.add(food);
@@ -77,6 +84,7 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
       meal: meal,
       product: product,
       onAdd: (LoggedFood food) async {
+        food = food.copyWith(date: _currentDate); // <-- set date here
         await DatabaseHelper.instance.insertFood(meal, food);
         setState(() {
           _meals[meal]!.add(food);
@@ -102,7 +110,7 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
         children: [
           ...foods.map((food) => ListTile(
                 title: Text(food.name),
-                subtitle: Text('${food.amount}g - ${food.kcal} kcal'),
+                subtitle: Text('${food.amount} ${food.unit} - ${food.kcal} kcal'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),
                   onPressed: () => _deleteFood(mealName, food),
@@ -124,14 +132,53 @@ class _MealLoggerPageState extends State<MealLoggerPage> {
     );
   }
 
+  void _onPageChanged(int page) {
+    setState(() {
+      _currentPage = page;
+    });
+    _loadMealsFromDatabase(_currentDate);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Meal Logger')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: _meals.entries.map((e) => _buildMealCard(e.key, e.value)).toList(),
+      body: PageView.builder(
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        itemBuilder: (context, pageIndex) {
+          final date = _today.add(Duration(days: pageIndex - 1000));
+          return Column(
+            children: [
+              SizedBox(height: 16),
+              Text(
+                DateFormat('yyyy-MM-dd').format(date),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: _meals.entries.map((e) => _buildMealCard(e.key, e.value)).toList(),
+                ),
+              ),
+            ],
+          );
+        },
+        itemCount: 2000,
       ),
+      floatingActionButton: _currentPage != 1000
+          ? FloatingActionButton.extended(
+              icon: const Icon(Icons.today),
+              label: const Text('Today'),
+              onPressed: () {
+                _pageController.animateToPage(
+                  1000,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+            )
+          : null,
     );
   }
 }

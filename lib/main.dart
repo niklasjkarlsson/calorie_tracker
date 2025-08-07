@@ -164,9 +164,6 @@ class _HomePageState extends State<HomePage> {
             if (_productName != null) ...[
               Text('Product: $_productName',
                   style: const TextStyle(fontSize: 18)),
-              if (_calories != null)
-                Text('Calories per 100g: $_calories kcal',
-                    style: const TextStyle(fontSize: 18)),
               if (_selectedProduct != null) ...[
                 Text('Brand : ${_selectedProduct!['brands'] ?? 'Unknown'}'),
                 Text('Proteins: ${_selectedProduct!['nutriments']?['proteins_100g']?.toString() ?? 'N/A'} g'),
