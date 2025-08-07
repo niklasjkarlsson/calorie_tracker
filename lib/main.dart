@@ -4,6 +4,7 @@ import 'barcode_scanner_page.dart';
 import 'dart:async';
 import 'meal_logger_page.dart';
 import 'widgets/add_food_dialog.dart';
+import 'goals_page.dart';
 
 void main() {
   runApp(const CalorieTrackerApp());
@@ -103,7 +104,19 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Calorie Tracker')),
+      appBar: AppBar(
+        title: const Text('Calorie Tracker'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const GoalsPage()),
+              );
+            },
+          )
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
